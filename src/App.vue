@@ -135,11 +135,7 @@ export default {
   data() {
     return {
       ticker: "default",
-      tickers: [
-        { name: "DEMO1", price: "-" },
-        { name: "DEMO2", price: "2" },
-        { name: "DEMO3", price: "-" }
-      ],
+      tickers: [],
       sel: null
     };
   },
@@ -152,6 +148,14 @@ export default {
       };
 
       this.tickers.push(newTicker);
+
+    setInterval(async () => {
+      const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=USD&api_key={8cd95dcb4a2f5927987f4d53cb708aba20beb685b6e5d24d5893f7404599e739}`);
+      const data = await f.json();
+      console.log(data)
+      this.tickers.find(t => t.name === newTicker.name).price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+    }, 3000);
+
       this.ticker = "";
     },
 
