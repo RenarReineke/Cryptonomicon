@@ -45,9 +45,17 @@
 
       <template v-if="tickers.length">
         <hr class="w-full border-t border-gray-600 my-4" />
+        <div>
+          <button class="mx-2 my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+          >Назад</button>
+          <button class="mx-2 my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+          >Вперед</button>
+          <div>Фильтр: <input v-model="filter"/></div>
+        </div>
+        <hr class="w-full border-t border-gray-600 my-4" />
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
-            v-for="t in tickers"
+            v-for="t in filteredTickers()"
             :key="t.name"
             @click="select(t)"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
@@ -139,7 +147,8 @@ export default {
       ticker: "default",
       tickers: [],
       sel: null,
-      graph: []
+      graph: [],
+      filter: ""
     };
   },
 
@@ -152,6 +161,10 @@ export default {
   },
 
   methods: {
+
+    filteredTickers() {
+      return this.tickers.filter(ticker => ticker.name.includes(this.filter));
+    },
 
     subscribeToUpdate(tickerName) {
       setInterval(async () => {
