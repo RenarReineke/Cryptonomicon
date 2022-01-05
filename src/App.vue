@@ -46,10 +46,20 @@
       <template v-if="tickers.length">
         <hr class="w-full border-t border-gray-600 my-4" />
         <div>
-          <button class="mx-2 my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-          >Назад</button>
-          <button class="mx-2 my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-          >Вперед</button>
+          <button
+            v-if="page > 1"
+            class="mx-2 my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+            @click="page = page - 1"
+          >
+            Назад
+          </button>
+          <button
+            v-if="hasNextPage"
+            class="mx-2 my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+            @click="page = page + 1"
+          >
+            Вперед
+          </button>
           <div>Фильтр: <input v-model="filter"/></div>
         </div>
         <hr class="w-full border-t border-gray-600 my-4" />
@@ -148,7 +158,9 @@ export default {
       tickers: [],
       sel: null,
       graph: [],
-      filter: ""
+      filter: "",
+      page: 1,
+      hasNextPage: false
     };
   },
 
@@ -161,9 +173,12 @@ export default {
   },
 
   methods: {
-
     filteredTickers() {
-      return this.tickers.filter(ticker => ticker.name.includes(this.filter));
+      const start = (this.page - 1) * 6;
+      const end = this.page * 6;
+      const filteredTickers = this.tickers.filter(ticker => ticker.name.includes(this.filter));
+      this.hasNextPage = filteredTickers.length > end;
+      return filteredTickers.slice(start, end);
     },
 
     subscribeToUpdate(tickerName) {
@@ -210,6 +225,13 @@ export default {
 
     handleDelete(tickerToRemove) {
       this.tickers = this.tickers.filter(t => t !== tickerToRemove);
+      console.log("Delete!!!")
+    }
+  },
+
+  watch: {
+    filter() {
+      this.page = 1;
     }
   }
 };
