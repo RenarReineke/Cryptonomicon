@@ -189,6 +189,9 @@ export default {
     normalizedGraph() {
       let minPrice = Math.min(...this.graph);
       let maxPrice = Math.max(...this.graph);
+      if (minPrice === maxPrice) {
+        return this.graph.map(item => 50)
+      }
       return this.graph.map(
         price => 5 + ((price - minPrice) * 95) / (maxPrice - minPrice)
       );
