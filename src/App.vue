@@ -65,12 +65,12 @@
         <hr class="w-full border-t border-gray-600 my-4" />
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
-            v-for="t in filteredTickers()"
+            v-for="t in filteredTickers"
             :key="t.name"
             @click="select(t)"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
             :class="{
-              'border-4': sel === t
+              'border-4': selectTicker === t
             }"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
@@ -104,20 +104,20 @@
         </dl>
         <hr class="w-full border-t border-gray-600 my-4" />
       </template>
-      <section class="relative" v-if="sel">
+      <section class="relative" v-if="selectTicker">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          {{ sel.name }} - USD
+          {{ selectTicker.name }} - USD
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
             class="bg-purple-800 border w-10"
-            v-for="(bar, idx) in normalizeGraph()"
+            v-for="(bar, idx) in normalizeGraph"
             :key="idx"
             :style="{ height: `${bar}%` }"
           ></div>
         </div>
         <button
-          @click="sel = null"
+          @click="selectTicker = null"
           type="button"
           class="absolute top-0 right-0"
         >
@@ -156,13 +156,44 @@ export default {
     return {
       ticker: "default",
       tickers: [],
-      sel: null,
+
+      selectTicker: null,
       graph: [],
+
       filter: "",
-      page: 1,
-      hasNextPage: false
+      page: 1
     };
   },
+
+  computed: {
+    startIndex() {
+      return (this.page - 1) * 6
+    },
+
+    endIndex() {
+      return this.page * 6
+    },
+
+    filteredTickers() {
+      return this.tickers.filter(ticker => ticker.name.includes(this.filter));
+    },
+
+    paginatedTickers() {
+      return this.filteredTickers.slice(this.startIndex, this.endIndex)
+    },
+
+    hasNextPage() {
+      return this.filteredTickers > this.endIndex
+    },
+
+    normalizedGraph() {
+      let minPrice = Math.min(...this.graph);
+      let maxPrice = Math.max(...this.graph);
+      return this.graph.map(
+        price => 5 + ((price - minPrice) * 95) / (maxPrice - minPrice)
+      );
+    }
+  }
 
   created() {
     const windowData = Object.fromEntries(new URL(window.location).searchParams.entries());
@@ -184,14 +215,6 @@ export default {
   },
 
   methods: {
-    filteredTickers() {
-      const start = (this.page - 1) * 6;
-      const end = this.page * 6;
-      const filteredTickers = this.tickers.filter(ticker => ticker.name.includes(this.filter));
-      this.hasNextPage = filteredTickers.length > end;
-      return filteredTickers.slice(start, end);
-    },
-
     subscribeToUpdate(tickerName) {
       setInterval(async () => {
         const f = await fetch(
@@ -202,7 +225,7 @@ export default {
         this.tickers.find(t => t.name === tickerName).price =
           data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
 
-        if (this.sel?.name === tickerName) this.graph.push(data.USD);
+        if (this.selectTicker?.name === tickerName) this.graph.push(data.USD);
       }, 10000);
     },
 
@@ -219,18 +242,10 @@ export default {
       this.subscribeToUpdate(currentTicker.name);
 
       this.ticker = "";
-    },
-
-    normalizeGraph() {
-      let minPrice = Math.min(...this.graph);
-      let maxPrice = Math.max(...this.graph);
-      return this.graph.map(
-        price => 5 + ((price - minPrice) * 95) / (maxPrice - minPrice)
-      );
-    },
+    }
 
     select(t) {
-      this.sel = t;
+      this.selectTicker = t;
       this.graph = [];
     },
 
