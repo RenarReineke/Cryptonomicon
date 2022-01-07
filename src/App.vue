@@ -60,7 +60,7 @@
           >
             Вперед
           </button>
-          <div>Фильтр: <input v-model="filter"/></div>
+          <div>Фильтр: <input v-model="filter" /></div>
         </div>
         <hr class="w-full border-t border-gray-600 my-4" />
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -111,7 +111,7 @@
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
             class="bg-purple-800 border w-10"
-            v-for="(bar, idx) in normalizeGraph"
+            v-for="(bar, idx) in normalizedGraph"
             :key="idx"
             :style="{ height: `${bar}%` }"
           ></div>
@@ -167,11 +167,11 @@ export default {
 
   computed: {
     startIndex() {
-      return (this.page - 1) * 6
+      return (this.page - 1) * 6;
     },
 
     endIndex() {
-      return this.page * 6
+      return this.page * 6;
     },
 
     filteredTickers() {
@@ -179,27 +179,36 @@ export default {
     },
 
     paginatedTickers() {
-      return this.filteredTickers.slice(this.startIndex, this.endIndex)
+      return this.filteredTickers.slice(this.startIndex, this.endIndex);
     },
 
     hasNextPage() {
-      return this.filteredTickers > this.endIndex
+      return this.filteredTickers > this.endIndex;
     },
 
     normalizedGraph() {
       let minPrice = Math.min(...this.graph);
       let maxPrice = Math.max(...this.graph);
       if (minPrice === maxPrice) {
-        return this.graph.map(item => 50)
+        return this.graph.map(() => 50);
       }
       return this.graph.map(
         price => 5 + ((price - minPrice) * 95) / (maxPrice - minPrice)
       );
+    },
+
+    pageStateOption() {
+      return {
+        filter: this.filter,
+        page: this.page
+      }
     }
-  }
+  },
 
   created() {
-    const windowData = Object.fromEntries(new URL(window.location).searchParams.entries());
+    const windowData = Object.fromEntries(
+      new URL(window.location).searchParams.entries()
+    );
 
     if (windowData.filter) {
       this.filter = windowData.filter;
@@ -208,9 +217,8 @@ export default {
     if (windowData.page) {
       this.page = windowData.page;
     }
-
-
     const tickersData = localStorage.getItem("crypto-list");
+    console.log(tickersData, typeof tickersData)
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
       this.tickers.forEach(ticker => this.subscribeToUpdate(ticker.name));
@@ -238,40 +246,50 @@ export default {
         price: "-"
       };
 
-      this.tickers.push(currentTicker);
-
-      localStorage.setItem("crypto-list", JSON.stringify(this.tickers));
+      this.tickers = [...this.tickers, currentTicker];
+      console.log("Сейчас в тикерах:  ", this.tickers);
 
       this.subscribeToUpdate(currentTicker.name);
 
       this.ticker = "";
-    }
+    },
 
     select(t) {
       this.selectTicker = t;
-      this.graph = [];
     },
 
     handleDelete(tickerToRemove) {
       this.tickers = this.tickers.filter(t => t !== tickerToRemove);
+      if (this.selectTicker === tickerToRemove) {
+        this.selectTicker = null;
+      }
     }
   },
 
   watch: {
-    filter() {
-      this.page = 1;
-      window.history.pushState(
-        null,
-        document.title,
-        `${window.location.pathname}?filter=${this.filter}&page=${this.page}`
-      );
+    tickers() {
+      localStorage.setItem("crypto-list", JSON.stringify(this.tickers));
     },
 
-    page() {
+    selectedTicker() {
+      this.graph = [];
+    },
+
+    paginatedTickers() {
+      if (this.paginatedTickers === 0 && this.page > 1) {
+        this.page -= 1;
+      }
+    },
+
+    filter() {
+      this.page = 1;
+    },
+
+    pageStateOption(value) {
       window.history.pushState(
         null,
         document.title,
-        `${window.location.pathname}?filter=${this.filter}&page=${this.page}`
+        `${window.location.pathname}?filter=${value.filter}&page=${value.page}`
       );
     }
   }
