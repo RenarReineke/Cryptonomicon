@@ -65,12 +65,12 @@
         <hr class="w-full border-t border-gray-600 my-4" />
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
-            v-for="t in filteredTickers"
+            v-for="t in paginatedTickers"
             :key="t.name"
             @click="select(t)"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
             :class="{
-              'border-4': selectTicker === t
+              'border-4': selectedTicker === t
             }"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
@@ -78,7 +78,7 @@
                 {{ t.name }} - USD
               </dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                {{ t.price }}
+                {{ formatPrice(t.price) }}
               </dd>
             </div>
             <div class="w-full border-t border-gray-200"></div>
@@ -104,11 +104,14 @@
         </dl>
         <hr class="w-full border-t border-gray-600 my-4" />
       </template>
-      <section class="relative" v-if="selectTicker">
+      <section class="relative" v-if="selectedTicker">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          {{ selectTicker.name }} - USD
+          {{ selectedTicker.name }} - USD
         </h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64">
+        <div
+          class="flex items-end border-gray-600 border-b border-l h-64"
+          ref="graph"
+        >
           <div
             class="bg-purple-800 border w-10"
             v-for="(bar, idx) in normalizedGraph"
@@ -117,7 +120,7 @@
           ></div>
         </div>
         <button
-          @click="selectTicker = null"
+          @click="selectedTicker = null"
           type="button"
           class="absolute top-0 right-0"
         >
@@ -149,6 +152,8 @@
 </template>
 
 <script>
+import { subscribeToTicker, unSubscribeFromTicker } from "./api";
+
 export default {
   name: "App",
 
@@ -157,7 +162,7 @@ export default {
       ticker: "default",
       tickers: [],
 
-      selectTicker: null,
+      selectedTicker: null,
       graph: [],
 
       filter: "",
@@ -201,7 +206,7 @@ export default {
       return {
         filter: this.filter,
         page: this.page
-      }
+      };
     }
   },
 
@@ -218,26 +223,35 @@ export default {
       this.page = windowData.page;
     }
     const tickersData = localStorage.getItem("crypto-list");
-    console.log(tickersData, typeof tickersData)
+
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
-      this.tickers.forEach(ticker => this.subscribeToUpdate(ticker.name));
+      this.tickers.forEach(ticker => {
+        subscribeToTicker(ticker.name, newPrice => {
+          this.updateTicker(ticker.name, newPrice);
+        });
+      });
     }
   },
 
   methods: {
-    subscribeToUpdate(tickerName) {
-      setInterval(async () => {
-        const f = await fetch(
-          `https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key={a654b39b0b544c04165b55c1ef3032445bb65fa03fff23a21599d1dc781e0ee0}`
-        );
-        const data = await f.json();
-        console.log(data);
-        this.tickers.find(t => t.name === tickerName).price =
-          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+    updateTicker(tickerName, newPrice) {
+      console.log(this.$refs.graph);
+      this.tickers
+        .filter(t => t.name === tickerName)
+        .forEach(t => {
+          if (t === this.selectedTicker) {
+            this.graph.push(newPrice);
+          }
+          t.price = newPrice;
+        });
+    },
 
-        if (this.selectTicker?.name === tickerName) this.graph.push(data.USD);
-      }, 10000);
+    formatPrice(price) {
+      if (price === "-") {
+        return price;
+      }
+      return price > 1 ? price.toFixed(2) : price.toPrecision(2);
     },
 
     add() {
@@ -247,22 +261,25 @@ export default {
       };
 
       this.tickers = [...this.tickers, currentTicker];
-      console.log("Сейчас в тикерах:  ", this.tickers);
-
-      this.subscribeToUpdate(currentTicker.name);
 
       this.ticker = "";
+      this.filter = "";
+
+      subscribeToTicker(currentTicker.name, newPrice =>
+        this.updateTicker(currentTicker.name, newPrice)
+      );
     },
 
     select(t) {
-      this.selectTicker = t;
+      this.selectedTicker = t;
     },
 
     handleDelete(tickerToRemove) {
       this.tickers = this.tickers.filter(t => t !== tickerToRemove);
-      if (this.selectTicker === tickerToRemove) {
-        this.selectTicker = null;
+      if (this.selectedTicker === tickerToRemove) {
+        this.selectedTicker = null;
       }
+      unSubscribeFromTicker(tickerToRemove.name);
     }
   },
 
