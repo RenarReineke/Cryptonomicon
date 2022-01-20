@@ -16,7 +16,6 @@ socket.addEventListener("message", e => {
   if (type !== AGGREGATE_INDEX || newPrice === undefined) {
     return;
   }
-  console.log("ticker from WebSocket: ", currency);
   const handlers = tickersHandlers.get(currency.toLowerCase()) ?? [];
   handlers.forEach(fn => fn(newPrice));
 });
@@ -76,7 +75,6 @@ export const subscribeToTicker = (ticker, cb) => {
   const subscribers = tickersHandlers.get(ticker) || [];
   tickersHandlers.set(ticker, [...subscribers, cb]);
   subscribeToTickerOnWS(ticker.toUpperCase());
-  console.log("subscriber has been to the thicker: ", ticker);
 };
 
 export const unSubscribeFromTicker = ticker => {
